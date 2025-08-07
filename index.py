@@ -6,7 +6,7 @@ import openai
 from dotenv import load_dotenv
 import os
 
-load_dotenv()  # Loads variables from .env
+load_dotenv() 
 openai.api_key = os.getenv("api_key")
 
 class Destination:
@@ -134,7 +134,7 @@ class ItineraryManager:
         return results
     
     def view_all_destinations(self):
-        """Display all destinations in a clean format."""
+        
         if not self.destinations:
             print("📭 No destinations in your itinerary yet!")
             return
@@ -146,7 +146,7 @@ class ItineraryManager:
             print(f"{i}. {dest}")
     
     def save_to_file(self):
-        """Save all destinations to JSON file."""
+       
         try:
             data = [dest.to_dict() for dest in self.destinations]
             with open(self.filename, 'w') as f:
@@ -156,7 +156,7 @@ class ItineraryManager:
             print(f"❌ Error saving file: {e}")
     
     def load_from_file(self):
-        """Load destinations from JSON file."""
+        
         if not os.path.exists(self.filename):
             return
         
@@ -170,7 +170,7 @@ class ItineraryManager:
             print(f"❌ Error loading file: {e}")
     
     def _validate_date(self, date_str: str) -> bool:
-        """Validate date format YYYY-MM-DD."""
+        
         try:
             datetime.strptime(date_str, '%Y-%m-%d')
             return True
@@ -179,24 +179,24 @@ class ItineraryManager:
             return False
     
     def sort_by_date(self):
-        """Sort destinations by start date."""
+        
         self.destinations.sort(key=lambda x: x.start_date)
         print("✅ Destinations sorted by start date!")
     
     def sort_by_budget(self):
-        """Sort destinations by budget."""
+        
         self.destinations.sort(key=lambda x: x.budget)
         print("✅ Destinations sorted by budget!")
 
 
 class AITravelAssistant:
-    """Handles OpenAI API integration for travel assistance."""
+   
     
     def __init__(self, api_key: str):
         self.client = openai.OpenAI(api_key=api_key)
     
     def generate_itinerary(self, destination: Destination) -> str:
-        """Generate a daily travel itinerary using OpenAI."""
+        
         try:
             prompt = f"""
 Create a detailed daily travel itinerary for {destination.city}, {destination.country}
@@ -230,7 +230,7 @@ Format the response in a clear, organized manner.
             return f"❌ Error generating itinerary: {e}"
     
     def generate_budget_tips(self, destination: Destination) -> str:
-        """Generate budget-saving tips for the destination."""
+      
         try:
             prompt = f"""
 Provide money-saving tips and budget advice for traveling to {destination.city}, {destination.country}.
@@ -264,7 +264,7 @@ Keep it practical and specific to this location.
 
 
 class TravelPlannerApp:
-    """Main application class that handles the user interface."""
+   
     
     def __init__(self):
         # Initialize with the provided API key
@@ -273,7 +273,7 @@ class TravelPlannerApp:
         self.ai_assistant = AITravelAssistant(openai.api_key)
     
     def display_menu(self):
-        """Display the main menu."""
+        
         print("\n" + "="*50)
         print("🌍 AI TRAVEL ITINERARY PLANNER")
         print("="*50)
@@ -290,7 +290,7 @@ class TravelPlannerApp:
         print("="*50)
     
     def get_destination_input(self) -> Optional[Destination]:
-        """Get destination details from user input."""
+       
         print("\n📍 ADD NEW DESTINATION")
         print("-" * 30)
         
@@ -343,7 +343,7 @@ class TravelPlannerApp:
         return Destination(city, country, start_date, end_date, budget, activities)
     
     def ai_assistance_menu(self):
-        """Handle AI travel assistance options."""
+       
         if not self.manager.destinations:
             print("❌ No destinations available! Add some destinations first.")
             return
@@ -390,7 +390,7 @@ class TravelPlannerApp:
             print("❌ Invalid input!")
     
     def sort_menu(self):
-        """Handle sorting options."""
+        
         if not self.manager.destinations:
             print(" No destinations to sort!")
             return
@@ -410,7 +410,7 @@ class TravelPlannerApp:
             print("❌ Invalid option!")
     
     def run(self):
-        """Main application loop."""
+       
         print(" Welcome to AI Travel Itinerary Planner!")
         
         while True:
