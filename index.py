@@ -7,8 +7,7 @@ from dotenv import load_dotenv
 import os
 
 load_dotenv() 
-openai.api_key = os.getenv("api_key")
-
+openai.api_key = os.getenv("OPENAI_API_KEY")
 class Destination:
     """Represents a travel destination with all necessary details."""
     
@@ -190,12 +189,60 @@ class ItineraryManager:
 
 
 class AITravelAssistant:
-   
+    """AI-powered travel assistant using OpenAI API."""
     
-    def __init__(self, api_key: str):
-        self.client = openai.OpenAI(api_key=api_key)
+    def __init__(self, api_key: str = None):
+        # Multiple ways to get the API key
+        if api_key:
+            self.api_key = api_key
+        else:
+            # Try different environment variable names
+            self.api_key = (
+                os.getenv("OPENAI_API_KEY") or 
+                os.getenv("api_key") or 
+                os.getenv("OPENAI_API") or
+                os.getenv("OPENAI_KEY")
+            )
+        
+        if not self.api_key:
+            print("⚠️  Warning: No OpenAI API key found!")
+            print("Set your API key using one of these methods:")
+            print("1. Set OPENAI_API_KEY environment variable")
+            print("2. Add OPENAI_API_KEY=your_key_here to a .env file")
+            print("3. The AI features will be disabled without a valid API key")
+            self.client = None
+        else:
+            try:
+                self.client = openai.OpenAI(api_key=self.api_key)
+                # Test the API key with a simple request
+                self._test_api_key()
+            except Exception as e:
+                print(f"❌ Error initializing OpenAI client: {e}")
+                self.client = None
+    
+    def _test_api_key(self):
+        """Test if the API key is valid."""
+        try:
+            # Make a minimal test request
+            response = self.client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[{"role": "user", "content": "Hello"}],
+                max_tokens=5
+            )
+            print("✅ OpenAI API key validated successfully!")
+        except openai.AuthenticationError:
+            print("❌ Invalid OpenAI API key! Please check your API key.")
+            self.client = None
+        except Exception as e:
+            print(f"⚠️  Warning: Could not validate API key: {e}")
+    
+    def is_available(self) -> bool:
+        """Check if AI features are available."""
+        return self.client is not None
     
     def generate_itinerary(self, destination: Destination) -> str:
+        if not self.is_available():
+            return self._generate_fallback_itinerary(destination)
         
         try:
             prompt = f"""
@@ -226,11 +273,17 @@ Format the response in a clear, organized manner.
             
             return response.choices[0].message.content
             
+        except openai.AuthenticationError:
+            return "❌ Authentication failed. Please check your OpenAI API key."
+        except openai.RateLimitError:
+            return "❌ Rate limit exceeded. Please try again later."
         except Exception as e:
             return f"❌ Error generating itinerary: {e}"
     
     def generate_budget_tips(self, destination: Destination) -> str:
-      
+        if not self.is_available():
+            return self._generate_fallback_budget_tips(destination)
+        
         try:
             prompt = f"""
 Provide money-saving tips and budget advice for traveling to {destination.city}, {destination.country}.
@@ -259,23 +312,118 @@ Keep it practical and specific to this location.
             
             return response.choices[0].message.content
             
+        except openai.AuthenticationError:
+            return "❌ Authentication failed. Please check your OpenAI API key."
+        except openai.RateLimitError:
+            return "❌ Rate limit exceeded. Please try again later."
         except Exception as e:
             return f"❌ Error generating budget tips: {e}"
+    
+    def _generate_fallback_itinerary(self, destination: Destination) -> str:
+        """Generate a basic itinerary without AI when API is not available."""
+        days = (datetime.strptime(destination.end_date, '%Y-%m-%d') - 
+                datetime.strptime(destination.start_date, '%Y-%m-%d')).days + 1
+        
+        itinerary = f"""
+🚫 AI Features Unavailable - Basic Itinerary Template
+
+📍 {destination.city}, {destination.country}
+📅 {destination.start_date} to {destination.end_date} ({days} days)
+💰 Budget: ${destination.budget}
+🎯 Activities: {', '.join(destination.activities)}
+
+📋 SUGGESTED DAILY STRUCTURE:
+{'='*40}
+
+Day 1: Arrival & City Orientation
+- Check into accommodation
+- Explore nearby area
+- Local restaurant for dinner
+
+Day 2-{days-1}: Main Activities
+- Morning: {destination.activities[0] if destination.activities else 'Sightseeing'}
+- Afternoon: {destination.activities[1] if len(destination.activities) > 1 else 'Local exploration'}
+- Evening: Local cuisine and culture
+
+Day {days}: Departure
+- Last-minute shopping/activities
+- Check out and travel home
+
+💡 GENERAL TIPS:
+- Research local transportation options
+- Book accommodations in advance
+- Try local street food
+- Visit tourist information centers
+- Keep emergency contacts handy
+
+⚠️  For detailed, personalized itineraries, please set up your OpenAI API key.
+"""
+        return itinerary
+    
+    def _generate_fallback_budget_tips(self, destination: Destination) -> str:
+        """Generate basic budget tips without AI."""
+        return f"""
+🚫 AI Features Unavailable - General Budget Tips
+
+💰 BUDGET TIPS FOR {destination.city.upper()}
+{'='*40}
+
+🏠 ACCOMMODATION:
+- Consider hostels or budget hotels
+- Look for accommodations outside city center
+- Book in advance for better rates
+- Check for group discounts
+
+🍽️ FOOD & DINING:
+- Eat at local markets and street food stalls
+- Cook meals if accommodation has kitchen
+- Look for lunch specials and happy hours
+- Avoid touristy restaurant areas
+
+🚌 TRANSPORTATION:
+- Use public transport instead of taxis
+- Walk or rent bicycles when possible
+- Look for day passes or tourist cards
+- Book flights/trains in advance
+
+🎯 ACTIVITIES:
+- Look for free walking tours
+- Visit free museums on designated days
+- Enjoy parks and natural attractions
+- Check for student/senior discounts
+
+💡 GENERAL MONEY-SAVING TIPS:
+- Set a daily spending limit
+- Use budget tracking apps
+- Avoid currency exchange at airports
+- Negotiate prices at local markets
+- Travel during off-peak seasons
+
+⚠️  For location-specific budget advice, please set up your OpenAI API key.
+"""
 
 
 class TravelPlannerApp:
-   
+    """Main application class for the travel planner."""
     
     def __init__(self):
-        # Initialize with the provided API key
-        
         self.manager = ItineraryManager()
-        self.ai_assistant = AITravelAssistant(openai.api_key)
+        self.ai_assistant = AITravelAssistant()
+        
+        # Show AI status on startup
+        if not self.ai_assistant.is_available():
+            print("\n⚠️  AI Features Disabled")
+            print("To enable AI features:")
+            print("1. Get an API key from https://platform.openai.com/api-keys")
+            print("2. Set OPENAI_API_KEY environment variable")
+            print("3. Or add OPENAI_API_KEY=your_key to .env file")
     
     def display_menu(self):
+        ai_status = "🤖 Available" if self.ai_assistant.is_available() else "🚫 Disabled"
         
         print("\n" + "="*50)
         print("🌍 AI TRAVEL ITINERARY PLANNER")
+        print(f"AI Status: {ai_status}")
         print("="*50)
         print("1. Add Destination")
         print("2. Remove Destination") 
@@ -286,11 +434,30 @@ class TravelPlannerApp:
         print("7. Save Itinerary")
         print("8. Load Itinerary")
         print("9. Sort Destinations")
-        print("10. Exit")
+        print("10. Setup API Key")
+        print("11. Exit")
         print("="*50)
     
+    def setup_api_key(self):
+        """Allow user to set up API key during runtime."""
+        print("\n🔑 API KEY SETUP")
+        print("-" * 30)
+        print("You can get an API key from: https://platform.openai.com/api-keys")
+        
+        api_key = input("Enter your OpenAI API key (or press Enter to skip): ").strip()
+        
+        if api_key:
+            # Test the new API key
+            test_assistant = AITravelAssistant(api_key)
+            if test_assistant.is_available():
+                self.ai_assistant = test_assistant
+                print("✅ API key set successfully! AI features are now available.")
+            else:
+                print("❌ Invalid API key. Please try again.")
+        else:
+            print("⏭️  Skipped API key setup.")
+    
     def get_destination_input(self) -> Optional[Destination]:
-       
         print("\n📍 ADD NEW DESTINATION")
         print("-" * 30)
         
@@ -343,9 +510,12 @@ class TravelPlannerApp:
         return Destination(city, country, start_date, end_date, budget, activities)
     
     def ai_assistance_menu(self):
-       
         if not self.manager.destinations:
             print("❌ No destinations available! Add some destinations first.")
+            return
+        
+        if not self.ai_assistant.is_available():
+            print("❌ AI features are disabled. Please set up your OpenAI API key first (option 10).")
             return
         
         print("\n🤖 AI TRAVEL ASSISTANCE")
@@ -390,12 +560,11 @@ class TravelPlannerApp:
             print("❌ Invalid input!")
     
     def sort_menu(self):
-        
         if not self.manager.destinations:
-            print(" No destinations to sort!")
+            print("❌ No destinations to sort!")
             return
         
-        print("\n SORT DESTINATIONS")
+        print("\n📊 SORT DESTINATIONS")
         print("-" * 30)
         print("1. Sort by Start Date")
         print("2. Sort by Budget")
@@ -410,12 +579,11 @@ class TravelPlannerApp:
             print("❌ Invalid option!")
     
     def run(self):
-       
-        print(" Welcome to AI Travel Itinerary Planner!")
+        print("🌍 Welcome to AI Travel Itinerary Planner!")
         
         while True:
             self.display_menu()
-            choice = input("\nEnter your choice (1-10): ").strip()
+            choice = input("\nEnter your choice (1-11): ").strip()
             
             if choice == "1":
                 destination = self.get_destination_input()
@@ -460,13 +628,16 @@ class TravelPlannerApp:
                 self.sort_menu()
             
             elif choice == "10":
+                self.setup_api_key()
+            
+            elif choice == "11":
                 self.manager.save_to_file()
                 print("👋 Thank you for using AI Travel Itinerary Planner!")
                 print("🌟 Safe travels!")
                 break
             
             else:
-                print("❌ Invalid choice! Please enter 1-10.")
+                print("❌ Invalid choice! Please enter 1-11.")
             
             input("\nPress Enter to continue...")
 
