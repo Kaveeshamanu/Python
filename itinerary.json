@@ -1,0 +1,13 @@
+[
+  {
+    "city": "Kandy",
+    "country": "Sri lanka",
+    "start_date": "2025-08-05",
+    "end_date": "2025-08-10",
+    "budget": 150.0,
+    "activities": [
+      "Kandy Temple",
+      "Lake round"
+    ]
+  }
+]
